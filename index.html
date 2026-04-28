@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Pathfinder Лист персонажа | Голубая тема | адаптивный</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #b3d4f0;
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            padding: 1rem;
+        }
+
+        /* главный контейнер */
+        .sheet {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #eef5fc;
+            background: linear-gradient(145deg, #e8f1fa 0%, #d9e9f5 100%);
+            border-radius: 32px;
+            box-shadow: 0 12px 28px rgba(0, 20, 40, 0.2);
+            padding: 1.4rem;
+            border: 1px solid #8fc5e8;
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #1a4c6e;
+            border-left: 5px solid #2c7ab1;
+            padding-left: 12px;
+            margin: 1.2rem 0 0.8rem 0;
+            letter-spacing: -0.2px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #145c8a;
+            background: #cae3f2;
+            display: inline-block;
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+            margin: 0.6rem 0 0.8rem 0;
+            backdrop-filter: blur(2px);
+        }
+
+        /* сетка полей ввода */
+        .form-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            background: #e3f0f9;
+            padding: 1rem;
+            border-radius: 24px;
+            margin-bottom: 1rem;
+        }
+
+        .field {
+            flex: 1 1 180px;
+            min-width: 150px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #1e5a7e;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .field input, .field select {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 20px;
+            border: 1px solid #9bc2df;
+            background: white;
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: 0.1s;
+        }
+
+        .field input:focus, .field select:focus {
+            outline: none;
+            border-color: #2f86c1;
+            box-shadow: 0 0 0 2px #90caf9;
+        }
+
+        /* двойные колонки */
+        .two-cols {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 0.5rem 0;
+        }
+        .col {
+            flex: 1;
+            min-width: 180px;
+            background: #f4fafe;
+            border-radius: 20px;
+            padding: 0.8rem;
+        }
+
+        /* статы характеристики */
+        .stats-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            justify-content: space-between;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 24px;
+            padding: 0.6rem 0.3rem;
+            text-align: center;
+            flex: 1;
+            min-width: 60px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #cde3f1;
+        }
+        .stat-name {
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #0e5a85;
+            text-transform: uppercase;
+        }
+        .stat-val {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #0b4465;
+        }
+        .stat-mod {
+            font-size: 0.8rem;
+            color: #3483b0;
+        }
+
+        /* табличные блоки */
+        .info-line {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            background: #e2eff9;
+            padding: 0.6rem 1rem;
+            border-radius: 18px;
+            margin-bottom: 0.6rem;
+        }
+        .info-item {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .skill-list, .melee-list, .ranged-list {
+            list-style: none;
+        }
+        .skill-list li, .melee-list li, .ranged-list li {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed #bfd9ef;
+            padding: 6px 0;
+        }
+
+        button.save-btn {
+            background: #327aac;
+            border: none;
+            color: white;
+            font-weight: bold;
+            padding: 10px 16px;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            width: 100%;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button.save-btn:hover {
+            background: #1f6797;
+        }
+
+        .small-note {
+            font-size: 0.7rem;
+            color: #2c6d96;
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 550px) {
+            .sheet {
+                padding: 1rem;
+            }
+            .stat-card {
+                min-width: 55px;
+            }
+            .field {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="sheet" id="characterSheet">
+    <!-- Блок с редактируемыми полями, сохраняемыми в localStorage (GitHub Pages совместимо) -->
+    <div class="form-grid" id="editableFields">
+        <div class="field"><label>Имя персонажа</label><input type="text" id="charName" placeholder="Например: Элиан Ветрокрылый"></div>
+        <div class="field"><label>Имя игрока</label><input type="text" id="playerName" placeholder="Ваше имя"></div>
+        <div class="field"><label>Народ</label><input type="text" id="race" placeholder="Эльф, человек, гном..."></div>
+        <div class="field"><label>Родословная</label><input type="text" id="lineage" placeholder="Древний род, полукровка..."></div>
+        <div class="field"><label>Происхождение</label><input type="text" id="origin" placeholder="Изгой, аристократ..."></div>
+        <div class="field"><label>Размер</label><input type="text" id="size" placeholder="Средний, Маленький"></div>
+        <div class="field">
+            <label>Мировоззрение</label>
+            <select id="alignment">
+                <option value="Принципиальный добрый">Принципиальный добрый</option>
+                <option value="Нейтральный добрый" selected>Нейтральный добрый</option>
+                <option value="Хаотичный добрый">Хаотичный добрый</option>
+                <option value="Нейтральный">Нейтральный</option>
+                <option value="Принципиальный нейтральный">Принципиальный нейтральный</option>
+                <option value="Хаотичный нейтральный">Хаотичный нейтральный</option>
+                <option value="Принципиальный злой">Принципиальный злой</option>
+                <option value="Нейтральный злой">Нейтральный злой</option>
+                <option value="Хаотичный злой">Хаотичный злой</option>
+            </select>
+        </div>
+        <div class="field"><label>Дескрипторы</label><input type="text" id="descriptors" placeholder="маг, воин, дипломат..."></div>
+        <div class="field"><label>Божество</label><input type="text" id="deity" placeholder="Иора, Азраил..."></div>
+        <div class="field"><label>Уровень (1-20)</label><input type="number" id="level" min="1" max="20" value="5"></div>
+        <div class="field"><label>Очки героизма (1-3)</label><input type="number" id="heroPoints" min="1" max="3" value="2"></div>
+    </div>
+
+    <!-- Характеристики -->
+    <h2>Характеристики</h2>
+    <div class="stats-row" id="statsBlock">
+        <div class="stat-card"><div class="stat-name">СИЛА</div><div class="stat-val" id="strVal">14</div><div class="stat-mod" id="strMod">+2</div><input type="range" class="stat-slider" data-stat="str" min="6" max="20" value="14" style="width:90%; margin-top:5px;"></div>
+        <div class="stat-card"><div class="stat-name">ЛОВКОСТЬ</div><div class="stat-val" id="dexVal">16</div><div class="stat-mod" id="dexMod">+3</div><input type="range" class="stat-slider" data-stat="dex" min="6" max="20" value="16" style="width:90%;"></div>
+        <div class="stat-card"><div class="stat-name">ТЕЛОСЛОЖ.</div><div class="stat-val" id="conVal">14</div><div class="stat-mod" id="conMod">+2</div><input type="range" class="stat-slider" data-stat="con" min="6" max="20" value="14" style="width:90%;"></div>
+        <div class="stat-card"><div class="stat-name">ИНТЕЛЛЕКТ</div><div class="stat-val" id="intVal">12</div><div class="stat-mod" id="intMod">+1</div><input type="range" class="stat-slider" data-stat="int" min="6" max="20" value="12" style="width:90%;"></div>
+        <div class="stat-card"><div class="stat-name">МУДРОСТЬ</div><div class="stat-val" id="wisVal">13</div><div class="stat-mod" id="wisMod">+1</div><input type="range" class="stat-slider" data-stat="wis" min="6" max="20" value="13" style="width:90%;"></div>
+        <div class="stat-card"><div class="stat-name">ХАРИЗМА</div><div class="stat-val" id="chaVal">15</div><div class="stat-mod" id="chaMod">+2</div><input type="range" class="stat-slider" data-stat="cha" min="6" max="20" value="15" style="width:90%;"></div>
+    </div>
+
+    <!-- Основные боевые показатели -->
+    <div class="two-cols">
+        <div class="col"><span style="font-weight:bold;">🛡️ Класс брони (КБ)</span><br><input type="number" id="armorClass" value="18" style="width:100%; margin-top:6px; border-radius:40px; padding:6px;"></div>
+        <div class="col"><span style="font-weight:bold;">❤️ Пункты здоровья (ПЗ)</span><br><input type="number" id="hitPoints" value="42" style="width:100%; margin-top:6px; border-radius:40px; padding:6px;"></div>
+        <div class="col"><span style="font-weight:bold;">⚡ Скорость</span><br><input type="text" id="speed" value="30 футов" style="width:100%; margin-top:6px; border-radius:40px; padding:6px;"></div>
+    </div>
+
+    <!-- Спасброски (испытания) -->
+    <h2>Спасброски / Испытания</h2>
+    <div class="info-line">
+        <span class="info-item">💪 Стойкость: <span id="fortSave">+6</span></span>
+        <span class="info-item">🏃 Рефлекс: <span id="refSave">+7</span></span>
+        <span class="info-item">🧠 Воля: <span id="willSave">+5</span></span>
+    </div>
+
+    <!-- Навыки -->
+    <h2>Навыки</h2>
+    <div class="col" style="background:#f0f7fe;">
+        <ul class="skill-list" id="skillList">
+            <li>Акробатика (Лов) <span>+7</span><input type="text" class="skill-edit" data-skill="acrobatics" value="+7" style="width:45px; margin-left:8px;"></li>
+            <li>Ремесло (Инт) <span>+4</span><input type="text" class="skill-edit" data-skill="craft" value="+4" style="width:45px;"></li>
+            <li>Дипломатия (Хар) <span>+6</span><input type="text" class="skill-edit" data-skill="diplomacy" value="+6" style="width:45px;"></li>
+            <li>Медицина (Мдр) <span>+5</span><input type="text" class="skill-edit" data-skill="medicine" value="+5" style="width:45px;"></li>
+            <li>Природа (Мдр) <span>+4</span><input type="text" class="skill-edit" data-skill="nature" value="+4" style="width:45px;"></li>
+            <li>Скрытность (Лов) <span>+9</span><input type="text" class="skill-edit" data-skill="stealth" value="+9" style="width:45px;"></li>
+            <li>Магия (Инт) <span>+8</span><input type="text" class="skill-edit" data-skill="arcana" value="+8" style="width:45px;"></li>
+        </ul>
+    </div>
+
+    <!-- Удары ближний бой / дальний бой -->
+    <div class="two-cols">
+        <div class="col"><strong>🗡️ Удары в ближнем бою</strong>
+            <ul class="melee-list" id="meleeList">
+                <li>Длинный меч <span>+8</span> <input type="text" class="melee-edit" value="+8" style="width:45px;"></li>
+                <li>Кинжал <span>+7</span> <input type="text" class="melee-edit" value="+7" style="width:45px;"></li>
+            </ul>
+        </div>
+        <div class="col"><strong>🏹 Удары в дальнем бою</strong>
+            <ul class="ranged-list" id="rangedList">
+                <li>Длинный лук <span>+9</span> <input type="text" class="ranged-edit" value="+9" style="width:45px;"></li>
+                <li>Метательный нож <span>+7</span> <input type="text" class="ranged-edit" value="+7" style="width:45px;"></li>
+            </ul>
+        </div>
+    </div>
+    <div><span style="font-weight:600;">🏅 Умения в оружии</span> <input type="text" id="weaponProfs" value="Простое, воинское, длинный лук" style="width:100%; border-radius:30px; padding:8px; margin-top:6px;"></div>
+
+    <!-- ЧЕРТЫ -->
+    <h2>Черты народа и способности</h2>
+    <textarea id="racialFeats" rows="2" style="width:100%; border-radius:18px; padding:8px; background:#fafeff;">Темное зрение, Устойчивость к магии, Наследие предков</textarea>
+    
+    <h2>Черты навыков</h2>
+    <textarea id="skillFeats" rows="2" style="width:100%; border-radius:18px; padding:8px;">Внимательность, Лекарь, Уклончивость</textarea>
+    
+    <h2>Общие черты</h2>
+    <textarea id="generalFeats" rows="2" style="width:100%; border-radius:18px; padding:8px;">Доп. сопротивление, Инициатива, Железная воля</textarea>
+    
+    <h2>Классовые черты и способности</h2>
+    <textarea id="classFeatures" rows="3" style="width:100%; border-radius:18px; padding:8px;">Боевое вдохновение, Экспертиза, Уклонение, Стойкость воина</textarea>
+    
+    <h2>Дополнительные черты</h2>
+    <textarea id="bonusFeats" rows="2" style="width:100%; border-radius:18px; padding:8px;">Магическая броня, Теневая походка, Знак зверя</textarea>
+
+    <!-- кнопка сохранения -->
+    <button class="save-btn" id="saveAllBtn">💾 Сохранить все данные (локально / GitHub Pages)</button>
+    <div class="small-note">📌 Все поля автоматически сохраняются. После перезагрузки данные останутся. Адаптировано под мобильные устройства.</div>
+</div>
+
+<script>
+    // Функция для вычисления модификатора
+    function calcMod(val) {
+        return Math.floor((val - 10) / 2);
+    }
+    
+    function updateStatModifiers() {
+        const strVal = parseInt(document.getElementById('strVal').innerText);
+        const dexVal = parseInt(document.getElementById('dexVal').innerText);
+        const conVal = parseInt(document.getElementById('conVal').innerText);
+        const intVal = parseInt(document.getElementById('intVal').innerText);
+        const wisVal = parseInt(document.getElementById('wisVal').innerText);
+        const chaVal = parseInt(document.getElementById('chaVal').innerText);
+        
+        document.getElementById('strMod').innerText = (calcMod(strVal) >=0 ? '+' : '') + calcMod(strVal);
+        document.getElementById('dexMod').innerText = (calcMod(dexVal) >=0 ? '+' : '') + calcMod(dexVal);
+        document.getElementById('conMod').innerText = (calcMod(conVal) >=0 ? '+' : '') + calcMod(conVal);
+        document.getElementById('intMod').innerText = (calcMod(intVal) >=0 ? '+' : '') + calcMod(intVal);
+        document.getElementById('wisMod').innerText = (calcMod(wisVal) >=0 ? '+' : '') + calcMod(wisVal);
+        document.getElementById('chaMod').innerText = (calcMod(chaVal) >=0 ? '+' : '') + calcMod(chaVal);
+        
+        // автообновление спасбросков (пример)
+        let fort = 2 + calcMod(conVal);
+        let ref = 2 + calcMod(dexVal);
+        let will = 1 + calcMod(wisVal);
+        document.getElementById('fortSave').innerText = (fort>=0?'+':'')+fort;
+        document.getElementById('refSave').innerText = (ref>=0?'+':'')+ref;
+        document.getElementById('willSave').innerText = (will>=0?'+':'')+will;
+    }
+    
+    // инициализация слайдеров
+    const sliders = document.querySelectorAll('.stat-slider');
+    sliders.forEach(slider => {
+        slider.addEventListener('input', function(e) {
+            const stat = this.getAttribute('data-stat');
+            const val = parseInt(this.value);
+            const spanVal = document.getElementById(`${stat}Val`);
+            if(spanVal) spanVal.innerText = val;
+            updateStatModifiers();
+            saveAllToLocal(); // автосохраняем
+        });
+    });
+    
+    // функция сохранения всего в localStorage
+    function saveAllToLocal() {
+        const storage = {};
+        // текстовые поля формы
+        storage.charName = document.getElementById('charName').value;
+        storage.playerName = document.getElementById('playerName').value;
+        storage.race = document.getElementById('race').value;
+        storage.lineage = document.getElementById('lineage').value;
+        storage.origin = document.getElementById('origin').value;
+        storage.size = document.getElementById('size').value;
+        storage.alignment = document.getElementById('alignment').value;
+        storage.descriptors = document.getElementById('descriptors').value;
+        storage.deity = document.getElementById('deity').value;
+        storage.level = document.getElementById('level').value;
+        storage.heroPoints = document.getElementById('heroPoints').value;
+        // AC, HP, Speed
+        storage.armorClass = document.getElementById('armorClass').value;
+        storage.hitPoints = document.getElementById('hitPoints').value;
+        storage.speed = document.getElementById('speed').value;
+        // характеристики числовые показатели из span
+        storage.str = document.getElementById('strVal').innerText;
+        storage.dex = document.getElementById('dexVal').innerText;
+        storage.con = document.getElementById('conVal').innerText;
+        storage.int = document.getElementById('intVal').innerText;
+        storage.wis = document.getElementById('wisVal').innerText;
+        storage.cha = document.getElementById('chaVal').innerText;
+        // навыки (редактируемые инпуты внутри skillList)
+        const skillInputs = document.querySelectorAll('.skill-edit');
+        skillInputs.forEach(inp => {
+            storage[`skill_${inp.getAttribute('data-skill')}`] = inp.value;
+        });
+        // ближний бой
+        const meleeInputs = document.querySelectorAll('.melee-edit');
+        storage.meleeValues = [];
+        meleeInputs.forEach(inp => { storage.meleeValues.push(inp.value); });
+        const rangedInputs = document.querySelectorAll('.ranged-edit');
+        storage.rangedValues = [];
+        rangedInputs.forEach(inp => { storage.rangedValues.push(inp.value); });
+        
+        storage.weaponProfs = document.getElementById('weaponProfs').value;
+        storage.racialFeats = document.getElementById('racialFeats').value;
+        storage.skillFeats = document.getElementById('skillFeats').value;
+        storage.generalFeats = document.getElementById('generalFeats').value;
+        storage.classFeatures = document.getElementById('classFeatures').value;
+        storage.bonusFeats = document.getElementById('bonusFeats').value;
+        
+        // сохранение слайдеров позиций
+        const sliderPositions = {};
+        document.querySelectorAll('.stat-slider').forEach(sld => {
+            sliderPositions[sld.getAttribute('data-stat')] = sld.value;
+        });
+        storage.sliderPositions = sliderPositions;
+        
+        localStorage.setItem('pathfinderCharacterBlue', JSON.stringify(storage));
+    }
+    
+    function loadFromLocal() {
+        const raw = localStorage.getItem('pathfinderCharacterBlue');
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (data.charName !== undefined) document.getElementById('charName').value = data.charName;
+        if (data.playerName !== undefined) document.getElementById('playerName').value = data.playerName;
+        if (data.race !== undefined) document.getElementById('race').value = data.race;
+        if (data.lineage !== undefined) document.getElementById('lineage').value = data.lineage;
+        if (data.origin !== undefined) document.getElementById('origin').value = data.origin;
+        if (data.size !== undefined) document.getElementById('size').value = data.size;
+        if (data.alignment !== undefined) document.getElementById('alignment').value = data.alignment;
+        if (data.descriptors !== undefined) document.getElementById('descriptors').value = data.descriptors;
+        if (data.deity !== undefined) document.getElementById('deity').value = data.deity;
+        if (data.level !== undefined) document.getElementById('level').value = data.level;
+        if (data.heroPoints !== undefined) document.getElementById('heroPoints').value = data.heroPoints;
+        if (data.armorClass !== undefined) document.getElementById('armorClass').value = data.armorClass;
+        if (data.hitPoints !== undefined) document.getElementById('hitPoints').value = data.hitPoints;
+        if (data.speed !== undefined) document.getElementById('speed').value = data.speed;
+        if (data.str !== undefined) document.getElementById('strVal').innerText = data.str;
+        if (data.dex !== undefined) document.getElementById('dexVal').innerText = data.dex;
+        if (data.con !== undefined) document.getElementById('conVal').innerText = data.con;
+        if (data.int !== undefined) document.getElementById('intVal').innerText = data.int;
+        if (data.wis !== undefined) document.getElementById('wisVal').innerText = data.wis;
+        if (data.cha !== undefined) document.getElementById('chaVal').innerText = data.cha;
+        // восстанавливаем слайдеры
+        if (data.sliderPositions) {
+            for (let s in data.sliderPositions) {
+                let slider = document.querySelector(`.stat-slider[data-stat="${s}"]`);
+                if(slider) slider.value = data.sliderPositions[s];
+            }
+        }
+        updateStatModifiers();
+        
+        // навыки
+        for (let key in data) {
+            if (key.startsWith('skill_')) {
+                let skillId = key.replace('skill_', '');
+                let inp = document.querySelector(`.skill-edit[data-skill="${skillId}"]`);
+                if(inp) inp.value = data[key];
+            }
+        }
+        if (data.meleeValues) {
+            const meleeEdits = document.querySelectorAll('.melee-edit');
+            meleeEdits.forEach((inp, idx) => { if(data.meleeValues[idx]) inp.value = data.meleeValues[idx]; });
+        }
+        if (data.rangedValues) {
+            const rangedEdits = document.querySelectorAll('.ranged-edit');
+            rangedEdits.forEach((inp, idx) => { if(data.rangedValues[idx]) inp.value = data.rangedValues[idx]; });
+        }
+        if (data.weaponProfs !== undefined) document.getElementById('weaponProfs').value = data.weaponProfs;
+        if (data.racialFeats !== undefined) document.getElementById('racialFeats').value = data.racialFeats;
+        if (data.skillFeats !== undefined) document.getElementById('skillFeats').value = data.skillFeats;
+        if (data.generalFeats !== undefined) document.getElementById('generalFeats').value = data.generalFeats;
+        if (data.classFeatures !== undefined) document.getElementById('classFeatures').value = data.classFeatures;
+        if (data.bonusFeats !== undefined) document.getElementById('bonusFeats').value = data.bonusFeats;
+    }
+    
+    // события для автосохранения при изменении любых input / select
+    function attachAutoSave() {
+        const allInputs = document.querySelectorAll('input, select, textarea');
+        allInputs.forEach(el => {
+            el.addEventListener('input', () => saveAllToLocal());
+            el.addEventListener('change', () => saveAllToLocal());
+        });
+        // отдельно для редактируемых списоков навыков и тд (уже есть input)
+    }
+    
+    // Инициализация
+    window.addEventListener('DOMContentLoaded', () => {
+        loadFromLocal();
+        attachAutoSave();
+        updateStatModifiers();
+        // кнопка сохранения на всякий случай дубль
+        document.getElementById('saveAllBtn').addEventListener('click', () => {
+            saveAllToLocal();
+            alert('✅ Все данные сохранены локально! (Персонаж для GitHub Pages)');
+        });
+        // подтянуть модификаторы после загрузки слайдеров
+        setTimeout(() => {
+            updateStatModifiers();
+            saveAllToLocal();
+        }, 20);
+    });
+    
+    // добавим синхронизацию при ручном изменении statVal? слайдеры уже сделаны.
+    // перепишем значения из слайдера в span через событие, уже есть.
+    // дополнительно вручную синхронизируем при изменении числовых полей ввода гибкости (но у нас диапазоны)
+    // также обновляем спасброски от конституции и тп.
+</script>
+</body>
+</html>
